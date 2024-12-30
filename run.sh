@@ -1,5 +1,7 @@
 #!/bin/ash -e
 
+. /app/libproduct.sh
+
 log_info "Entering main loop..."
 
 while :; do
