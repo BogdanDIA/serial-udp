@@ -125,7 +125,7 @@ static struct option main_options[] = {
 
 int main(int argc, char *argv[])
 {
-  char p_devicename[50]; p_devicename[0] = 0;
+  char p_devicename[256]; p_devicename[0] = 0;
   unsigned int p_baud_i = 921600;
   unsigned int p_baud = B921600;
   char p_hostname[50]; strcpy(p_hostname, "127.0.0.1");
