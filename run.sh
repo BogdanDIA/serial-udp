@@ -4,15 +4,9 @@
 
 log_info "Entering main loop..."
 
-while [[ true ]]; do
-  log_info btattach -B platforms-fd500000.pcie-pci-0000:01:00.0-usbv2-0:1.2.5:1.0-port0 -P h4 -S 921600 -N &
-  sleep 2
-done 
+btattach -B /dev/serial/by-path/platforms-fd500000.pcie-pci-0000:01:00.0-usbv2-0:1.2.5:1.0-port0 -P h4 -S 921600 -N &
 
-while [[ true ]]; do
-  log_info ./sudp-forwarder -D platform-fd500000.pcie-pci-0000:01:00.0-usbv2-0:1.2.6:1.0-port0 -b 921600 -N & 
-  sleep 2
-done
+./sudp-forwarder -d /dev/serial/by-path/platform-fd500000.pcie-pci-0000:01:00.0-usbv2-0:1.2.6:1.0-port0 -b 921600 -N 
 
 while :; do
   log_info "This is ESP32 HCI Proxy"
