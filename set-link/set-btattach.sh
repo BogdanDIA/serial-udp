@@ -34,4 +34,4 @@ while [[ true ]]; do
   sleep 2
 done
 
-echo "`date` set-btattach:btattach fail exit"
+echo "`date` set-btattach:btattach fail exit" | tee -a charging-log.txt
