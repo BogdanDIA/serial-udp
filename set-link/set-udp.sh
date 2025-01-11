@@ -49,7 +49,7 @@ fi
 log "`date` set-udp:sudp-forwarder"
 
 while [[ true ]]; do
-  /app/sudp-forwarder $PARAMS 2>&1 | tee -a /app/charging-log.txt
+  ${BIN_PATH}/sudp-forwarder $PARAMS 2>&1 | tee -a ${BIN_PATH}/charging-log.txt
   log "set-udp:sudp-forwarder crashed with $?.  Respawning.."
   sleep 2
 done
