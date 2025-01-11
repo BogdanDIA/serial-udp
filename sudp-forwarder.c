@@ -123,12 +123,15 @@ static struct option main_options[] = {
   { 0, 0, 0, 0 }
 };
 
+#define DEVICENAME_LEN_MAX 256
+#define HOSTNAME_LEN_MAX 50 
+
 int main(int argc, char *argv[])
 {
-  char p_devicename[256]; p_devicename[0] = 0;
+  char p_devicename[DEVICENAME_LEN_MAX]; p_devicename[0] = 0;
   unsigned int p_baud_i = 921600;
   unsigned int p_baud = B921600;
-  char p_hostname[50]; strcpy(p_hostname, "127.0.0.1");
+  char p_hostname[HOSTNAME_LEN_MAX]; strcpy(p_hostname, "127.0.0.1");
   unsigned long p_portno = 3333;
   int p_debug_flow = 0;
   int p_debug_data = 0;
@@ -139,7 +142,7 @@ int main(int argc, char *argv[])
   while ((opt=getopt_long(argc, argv, "+d:b:s:p:NFDh", main_options, NULL)) != -1) {
     switch (opt) {
       case 'd':
-        strcpy(p_devicename, optarg); 
+        strncpy(p_devicename, optarg, DEVICENAME_LEN_MAX); 
         break;
       case 'b':
         ; // satify the standard
@@ -190,7 +193,7 @@ int main(int argc, char *argv[])
         }
         break;
       case 's':
-        strcpy(p_hostname, optarg);
+        strncpy(p_hostname, optarg, HOSTNAME_LEN_MAX);
         break;
       case 'p':
         ; // satisfy the standard
