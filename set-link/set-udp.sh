@@ -10,28 +10,28 @@ if [[ -n "$SUDPFWD_DEVICE" ]]; then
   PARAMS="$PARAMS -d $SUDPFWD_DEVICE"
 else
   log "no serial device provided, exiting..."
-  exit -1
+  exit 1
 fi
 
 if [[ -n "$SUDPFWD_BAUD" ]]; then
   PARAMS="$PARAMS -b $SUDPFWD_BAUD"
 else
   log "no baud for device provided, exiting..."
-  exit -1
+  exit 1
 fi
 
 if [[ -n "$SUDPFWD_SERVER" ]]; then
   PARAMS="$PARAMS -s $SUDPFWD_SERVER"
 else
   log "no server provided, exiting..."
-  exit -1
+  exit 1
 fi
 
 if [[ -n "$SUDPFWD_PORT" ]]; then
   PARAMS="$PARAMS -p $SUDPFWD_PORT"
 else
   log "no port provided, exiting..."
-  exit -1
+  exit 1
 fi
 
 if [[ "$SUDPFWD_HWFLOW" -eq 0 ]]; then

@@ -9,21 +9,21 @@ if [[ -n "$BTATTACH_DEVICE" ]]; then
   PARAMS="$PARAMS -B $BTATTACH_DEVICE"
 else
   log "no serial device provided, exiting..."
-  exit -1
+  exit 1
 fi
 
 if [[ -n "$BTATTACH_BAUD" ]]; then
   PARAMS="$PARAMS -S $BTATTACH_BAUD"
 else
   echo "no baud for device provided, exiting..."
-  exit -1
+  exit 1
 fi
 
 if [[ -n "$BTATTACH_PROTOCOL" ]]; then
   PARAMS="$PARAMS -P $BTATTACH_PROTOCOL"
 else
   log "no protocol provided, exiting..."
-  exit -1
+  exit 1
 fi
 
 if [[ "$BTATTACH_HWFLOW" -eq 0 ]]; then
