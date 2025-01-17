@@ -19,7 +19,14 @@
 #include <stdint.h>
 #include <endian.h>
 
-int debug_data = 0;
+long int min_time_tx_rx = 0xffffffff;
+long int max_time_tx_rx = 0;
+long int avg_time_tx_rx = 0;
+
+float min_speed_kbps = 1000000.0;
+float max_speed_kbps = 0.0;
+float avg_speed_kbps = 0.0;
+
 int debug_flow = 0;
 
 // GCC style
@@ -109,7 +116,7 @@ static void usage(void)
 {
   printf("sudp-test-a - Utility for testing RTT speed of sudp-forwarder\n\n");
   printf("Usage:\n"
-    "\tsudp-test-a -d <dev> [-b <baud> ] [-L <plen>] [-N] [-F] [-D] [-h]\n");
+    "\tsudp-test-a -d <dev> [-b <baud> ] [-L <plen>] [-N] [-F] [-D] [-M <nmesg>] [-h]\n");
 }
 
 static struct option main_options[] = {
@@ -119,6 +126,7 @@ static struct option main_options[] = {
   { "nflow", 0, 0, 'N' },
   { "fdebug", 0, 0, 'F' },
   { "ddebug", 0, 0, 'D' },
+  { "mmessages", 0, 0, 'M' },
   { "help", 0, 0, 'h' },
   { 0, 0, 0, 0 }
 };
@@ -134,21 +142,22 @@ int main(int argc, char *argv[])
   int p_debug_flow = 0;
   int p_debug_data = 0;
   int p_no_rtscts = 0;
+  int p_max_messages = 10;
 
   int opt;
 
-  while ((opt=getopt_long(argc, argv, "+d:b:L:NFDh", main_options, NULL)) != -1) {
+  while ((opt=getopt_long(argc, argv, "+d:b:L:NFDM:h", main_options, NULL)) != -1) {
+    char *pTmp;
+
     switch (opt) {
       case 'd':
         strncpy(p_devicename, optarg, DEVICENAME_LEN_MAX);
         break;
       case 'b':
-        ; // satisfy the standard
-        char * pBaud;
-        p_baud_i  = strtoul(optarg, &pBaud, 10);
+        p_baud_i  = strtoul(optarg, &pTmp, 10);
         if(p_baud_i == 0)
         {
-          printf("wrong baud format: %s\n", optarg); 
+          fprintf(stderr, "wrong baud format: %s\n", optarg); 
           exit(-1);
         }
         switch (p_baud_i)
@@ -187,16 +196,14 @@ int main(int argc, char *argv[])
             p_baud = B1152000;
             break;
           default:
-            printf("wrong baud rate: %i\n", p_baud_i); 
+            fprintf(stderr, "wrong baud rate: %i\n", p_baud_i); 
         }
         break;
       case 'L':
-        ; // satisfy the standard
-        char * pLen;
-        p_param_length = strtoul(optarg, &pLen, 10);
+        p_param_length = strtoul(optarg, &pTmp, 10);
         if(p_param_length == 0)
         {
-          printf("wrong param_length format: %s\n", optarg); 
+          fprintf(stderr, "wrong param_length format: %s\n", optarg); 
           exit(-1);
         }
         break;
@@ -208,6 +215,14 @@ int main(int argc, char *argv[])
         break;
       case 'N':
         p_no_rtscts = 1;
+        break;
+      case 'M':
+        p_max_messages = strtoul(optarg, &pTmp, 10);
+        if(p_max_messages == 0)
+        {
+          fprintf(stderr, "wrong max messages format: %s\n", optarg); 
+          exit(-1);
+        }
         break;
       case 'h':
       default:
@@ -223,7 +238,14 @@ int main(int argc, char *argv[])
   // devicename is mandatory
   if (p_devicename[0] == 0)
   {
-    printf("no devicename was provided, exitting...\n");
+    fprintf(stderr, "no devicename was provided, exitting...\n");
+    exit(-1);
+  }
+
+  // check if max messages is positive
+  if (p_max_messages <= 0)
+  {
+    fprintf(stderr, "wrong max messages value: %i\n", p_max_messages);
     exit(-1);
   }
 
@@ -232,18 +254,24 @@ int main(int argc, char *argv[])
     printf("platform is BIG_ENDIAN\n");
   else if(BYTE_ORDER == LITTLE_ENDIAN)
     printf("platform is LITTLE_ENDIAN\n");
-  
+
+  // enable debug flow when debug data is enabled
+  if (p_debug_data)
+    p_debug_flow = 1;
+  debug_flow = p_debug_flow;
+
   printf("device: %s\n", p_devicename); 
   printf("baud: %i\n", p_baud_i); 
   printf("param_length: %u\n", p_param_length); 
   printf("fdebug: %i\n", p_debug_flow); 
   printf("ddebug: %i\n", p_debug_data); 
   printf("nrtscts: %i\n", p_no_rtscts); 
+  printf("mmessages: %i\n", p_max_messages); 
 
   int fd = open(p_devicename, O_RDWR | O_NOCTTY | O_SYNC);
   if (fd < 0)
   {
-    printf("error %d opening %s: %s\n", errno, p_devicename, strerror (errno));
+    fprintf(stderr, "error %d opening %s: %s\n", errno, p_devicename, strerror (errno));
     return (fd);
   }
   set_interface_attribs(fd, p_baud, 0);
@@ -253,26 +281,8 @@ int main(int argc, char *argv[])
   unsigned char buf_tx[BUFSIZE];
   unsigned char buf_rx[BUFSIZE];
 
-  // fork - child will handle UDP receive
-  pid_t child_pid;
-  child_pid = fork();
-
-  if (child_pid < 0) {
-    perror("Fork failed");
-    return (-1);
-  } else if (child_pid == 0) {
-    // In child process
-    PRINTF_LOG("Child process: serial reader\n");
-
-    while(1)
-    {
-      usleep(1000000); 
-    }
-  } else {
-    // In parent process
-    PRINTF_LOG("Parent process: Child process ID is %d\n", child_pid);
-
-    // timings measuring vars
+  {
+    // timing measuring vars
     struct timeval tx_tv, rx_tv, before_tv, after_tv, end_tv;
 
     // TX vars
@@ -288,7 +298,7 @@ int main(int argc, char *argv[])
     long int total_us = 0;
     float speed_kbps = 0.0;
 
-    while(1)
+    for (int i = 0; i < p_max_messages; i++)
     {
       // prepare TX message (header+data)
       // 0x0A + params_length + params
@@ -310,17 +320,22 @@ int main(int argc, char *argv[])
       tx_n = 0;
       tx_total_bytes = 0;
 
-      // loop until sending full data
+      // TX - loop until sending full data
       PRINTF_LOG("\nTX - sending test data\n");
+
+      // this is timestamp of TX 
+      gettimeofday(&tx_tv, NULL);
+
       do  
       {
         // print data
-        for (int i = 0; i < tx_size; i++)
-          PRINTF_LOG("%02x ", buf_tx[i]);
-        PRINTF_LOG("\n");
-
-        gettimeofday(&tx_tv, NULL);
-
+        if (p_debug_data)
+        {
+          for (int i = 0; i < tx_size; i++)
+            printf("%02x ", buf_tx[i]);
+          printf("\n");
+        }
+        
         // send data
         tx_n = write(fd, &buf_tx[tx_n], tx_size);
         if (tx_n > 0)
@@ -331,27 +346,29 @@ int main(int argc, char *argv[])
         else
         {
           // error
-          printf("write error from %s: %s\n", p_devicename, strerror(errno));
-          kill(child_pid,SIGKILL);
+          fprintf(stderr, "write error from %s: %s\n", p_devicename, strerror(errno));
           exit (-1);
         }
       } while (tx_total_bytes < tx_size);
 
+      
       // minimum value (cmd+len)
       nread = 3;
       total_bytes = 0;
 
-      // loop for receiving full reply
+      // RX - loop for receiving full reply
       PRINTF_LOG("RX - wating for reply\n");
       do
       {
         // read from serial port 
+        gettimeofday(&before_tv, NULL);
         int n = read(fd, &buf_rx[total_bytes], nread);
         if (n > 0)
         { 
           if (start_frame == 1)
           {
-            gettimeofday(&before_tv, NULL);
+            // this is partial frame timestamp after RX
+            //gettimeofday(&before_tv, NULL);
             start_frame = 0;
           }
 
@@ -364,7 +381,7 @@ int main(int argc, char *argv[])
 
           PRINTF_LOG("partial frame - received %i bytes, delta: %li, total_us: %li\n", n, delta, total_us);
 
-          if (debug_data)
+          if (p_debug_data)
           {
             for (int i = 0; i < n; i++)
               printf("%02x ", buf_rx[total_bytes + i]);
@@ -414,26 +431,44 @@ int main(int argc, char *argv[])
             gettimeofday(&rx_tv, NULL);
             long int time_tx = (long int)tx_tv.tv_sec * 1000000L + (long int)tx_tv.tv_usec;
             long int time_rx = (long int)rx_tv.tv_sec * 1000000L + (long int)rx_tv.tv_usec;
-            long int time_rx_tx = time_rx - time_tx;
-            speed_kbps = (float)(1000 * 8 * total_bytes / time_rx_tx);
-            printf("end frame: rx-tx: %li, total_bytes: %i, speed_kbps: %f\n", time_rx_tx, total_bytes, speed_kbps);
+            long int time_tx_rx = time_rx - time_tx;
+            speed_kbps = (float)(1000 * 8 * total_bytes / time_tx_rx);
+            PRINTF_LOG("end frame: tx-rx: %li, total_bytes: %i, speed_kbps: %f\n", time_tx_rx, total_bytes, speed_kbps);
 
-            if (debug_data)
+            // save min time_tx_rx
+            if (time_tx_rx < min_time_tx_rx)
+              min_time_tx_rx = time_tx_rx; 
+            // save max time_tx_rx
+            if (time_tx_rx > max_time_tx_rx)
+              max_time_tx_rx = time_tx_rx;
+            // save min speed_kbps
+            if (speed_kbps < min_speed_kbps)
+              min_speed_kbps = speed_kbps;
+            // save min speed_kbps
+            if (speed_kbps > max_speed_kbps)
+              max_speed_kbps = speed_kbps;
+            // calculate avg time_tx_rx
+            avg_time_tx_rx += time_tx_rx;
+            // calculate avg speed_kbps
+            avg_speed_kbps += speed_kbps;
+
+            if (p_debug_data)
             {
               for (int i = 0; i < total_bytes; i++)
                 printf("%02x ", buf_rx[i]);
               printf("\n");
             }
 
-            PRINTF_LOG("end frame - received %i bytes out of %i, from %s\n", total_bytes, packet_size, p_devicename);
-
-            /* process the message */
-            if (debug_data)
+            /* print the message */
+            if (p_debug_data)
             {
               for (int i = 0; i < total_bytes; i++)
                 if(buf_rx[i] != buf_tx[i])
-                  printf("data mismatch: index: %i, TX: %02x, RX: %02x\n", i, buf_tx[i], buf_rx[i]); 
+                  fprintf(stderr, "data mismatch: index: %i, TX: %02x, RX: %02x\n", i, buf_tx[i], buf_rx[i]); 
             }
+
+            PRINTF_LOG("end frame - received %i bytes out of %i, from %s\n", total_bytes, packet_size, p_devicename);
+            PRINTF_LOG("end frame: tx-rx: %li, total_bytes: %i, speed_kbps: %f\n", time_tx_rx, total_bytes, speed_kbps);
 
             // reset counters
             total_bytes = 0;
@@ -449,29 +484,28 @@ int main(int argc, char *argv[])
         }
         else if(n == 0)
         {
-          printf("read 0 bytes, exiting...\n");
-          kill(child_pid,SIGKILL);
+          fprintf(stderr, "read 0 bytes, exiting...\n");
           exit (-1);
         }
         else
         {
           // error
-          printf("read error from %s: %s\n", p_devicename, strerror(errno));
-          kill(child_pid,SIGKILL);
+          fprintf(stderr, "read error from %s: %s\n", p_devicename, strerror(errno));
           exit (-1);
         }
       } while(total_bytes < packet_size);
-
-      //usleep(100000); 
     }
 
-    // Wait for the child process to complete
-    int status;
-    waitpid(child_pid, &status, 0);
-    if (WIFEXITED(status)) {
-      //PRINTF_LOG("Parent process: Child exited with status %d\n", WEXITSTATUS(status));
-      printf("Parent process: Child exited with status %d\n", WEXITSTATUS(status));
-    }
+    avg_time_tx_rx /= p_max_messages;
+    avg_speed_kbps /= p_max_messages;
+    int data_len = p_param_length;
+
+    printf("result tx-rx: data_len: %i, min_time: %li,  max_time: %li, avg_time: %li, min_speed: %.1f, max_speed: %.1f, avg_speed: %.1f\n", \
+      data_len, min_time_tx_rx, max_time_tx_rx, avg_time_tx_rx, min_speed_kbps, max_speed_kbps, avg_speed_kbps);
+
+    // cleanup vars
+    min_time_tx_rx = 0; max_time_tx_rx = 0; avg_time_tx_rx = 0;
+    min_speed_kbps = 0.0; max_speed_kbps = 0.0; avg_speed_kbps = 0.0;
   }
 
   return (0);
