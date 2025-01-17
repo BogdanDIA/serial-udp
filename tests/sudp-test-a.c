@@ -123,9 +123,11 @@ static struct option main_options[] = {
   { 0, 0, 0, 0 }
 };
 
+#define DEVICENAME_LEN_MAX 256
+
 int main(int argc, char *argv[])
 {
-  char p_devicename[50]; p_devicename[0] = 0;
+  char p_devicename[DEVICENAME_LEN_MAX]; p_devicename[0] = 0;
   unsigned int p_baud_i = 921600;
   unsigned int p_baud = B921600;
   unsigned int p_param_length = 128;
@@ -138,7 +140,7 @@ int main(int argc, char *argv[])
   while ((opt=getopt_long(argc, argv, "+d:b:L:NFDh", main_options, NULL)) != -1) {
     switch (opt) {
       case 'd':
-        strcpy(p_devicename, optarg); 
+        strncpy(p_devicename, optarg, DEVICENAME_LEN_MAX);
         break;
       case 'b':
         ; // satisfy the standard
