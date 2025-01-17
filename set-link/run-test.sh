@@ -1,3 +1,5 @@
+#!/bin/ash
+
 CPATH=$(dirname "$0")/serial-udp.conf
 . $CPATH
 . ${SCRIPTS_PATH}/log-def.sh
