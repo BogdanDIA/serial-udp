@@ -1,4 +1,4 @@
-#!/bin/ash
+#!/bin/bash
 
 CPATH=$(dirname "$0")/serial-udp.conf
 . $CPATH

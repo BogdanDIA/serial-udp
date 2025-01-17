@@ -183,7 +183,7 @@ int main(int argc, char *argv[])
       // 0x0A + params_length + params
 
       // TX size
-      int param_length = 512;
+      int param_length = p_param_length;
       tx_size = 3 + param_length;
 
       // prepare TX header
