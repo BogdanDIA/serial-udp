@@ -44,6 +44,8 @@ static struct option main_options[] = {
   { 0, 0, 0, 0 }
 };
 
+#define HOSTNAME_LEN_MAX 50
+
 int main(int argc, char *argv[])
 {
   char p_hostname[50]; strcpy(p_hostname, "127.0.0.1");
@@ -58,7 +60,7 @@ int main(int argc, char *argv[])
   while ((opt=getopt_long(argc, argv, "+s:p:L:NFDh", main_options, NULL)) != -1) {
     switch (opt) {
       case 's':
-        strcpy(p_hostname, optarg);
+        strncpy(p_hostname, optarg, HOSTNAME_LEN_MAX);
         break;
       case 'p':
         ; // satisfy the std
