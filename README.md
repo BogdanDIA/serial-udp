@@ -233,7 +233,7 @@ Not mandatory- HW Flow(in case it can be configured e.g. the RTS/CTS were connec
 For now, to get the serial ports names in case of the USB-serial converters, ssh HA addon should be used to list the /dev/serial/by-path/ directory and identify the proper devices.
 The controller will show up in HA integration page as in the picture:
 
-<img aling="left" src='./pictures/show_ha_controller.png' width=40%>
+<img aling="center" src='./pictures/show_ha_controller.png' width=40%>
 
 
 From ssh console you can lounch `bluetoothctl` and use it:
