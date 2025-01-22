@@ -230,13 +230,12 @@ Not mandatory- HW Flow(in case it can be configured e.g. the RTS/CTS were connec
 - ble_btattach_hwflow = 1
 - ble_sudpfwd_hwflow = 1
 ```
-For now, to get the serial ports names in case of the USB-serial converters, ssh HA addon should be used to list the /dev/serial/by-path/ directory and identify the proper devices.
+For now, to get the serial ports names in case of the USB-serial converters, ssh HA addon should be used to list the /dev/serial/by-path/ directory and identify the devices to use.
 The controller will show up in HA integration page as in the picture:
 
 <img aling="center" src='./pictures/show_ha_controller.png' width=40%>
 
-
-From ssh console you can lounch `bluetoothctl` and use it:
+From ssh console you can execute `bluetoothctl` and use it:
 ```
 [bluetooth]# list
 Controller 08:3A:F2:13:35:C2 homeassistant #2 [default]
@@ -261,10 +260,14 @@ hci0:	Type: Primary  Bus: UART
 	TX bytes:69142 acl:0 sco:0 commands:561 errors:0
 ```
 
-### ESP32 setup 
-This is explayned in another package:
+When <b>UP RUNNING</b> is seen on the last added controller (hci1 in ourt case), everything is working as expected. The BD address is the MAC address of the ESP32 and it can be seen in ESP32's serial console upon boot.
 
+
+### ESP32 setup 
+This is explained in another package:
+```
 https://github.com/BogdanDIA/esp32-hci-proxy-target
+```
 
 ### Some technical notes
 - this implemetation tries to add minimum changes to the existing host OS and use what is directly available (e.g. use of the btattach). However, Using unmodified btattach brings the need for serial loopback. 
