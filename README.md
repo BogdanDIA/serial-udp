@@ -7,45 +7,51 @@ An experimental project aiming at creating virtual Bluetooth Controllers using r
 There are several ways to set-up the host, most notably one using <b>serial ports loopback</b> and using a <b>virtual serial port loopback</b>.
 ### Serial ports loopback set-up
 #### Serial port loopback with external adapters
-For this option, two USB-to-Serial adapters should be plugged into the host. On the physical layer side a null modem connection should be done bwetween the two adapters, three wires are needed plus additional 2 wires if HW flow control is to be used:
+For this option, two USB-to-Serial adapters (currently using CP2102 adapters) should be plugged into the host. On the physical layer side a null modem connection should be done bwetween the two adapters, two wires are needed plus additional two wires if HW flow control is to be used:
 ```
 TX<->RX
 RX<->TX
-GND<->GND
-
-and if HW flow control is used:
+and if HW flow control is used (recommended):
 RTS<->CTS
 CTS<->RTS
 ```
 
-The serial port names will change upon host reboot therefore it is necessary to use consistent paths. Identify the serial adapters from the console, this will be consistent as long as the USB-serial adapters are not inserted on different USB ports:
-```
+The serial port names may change upon host reboot therefore it is necessary to use consistent paths. Identify the serial adapters from the console, this will be consistent as long as the USB-serial adapters are not moved to different USB ports:
+<pre>
 cd /dev/serial/by-path
 ls -al
 lrwxrwxrwx 1 root root  13 Sep 14 21:24 <b>platform-xhci-hcd.0-usb-0:2:1.0-port0</b> -> ../../ttyUSB0
 lrwxrwxrwx 1 root root  13 Sep 14 21:24 <b>platform-xhci-hcd.1-usb-0:2:1.0-port0</b> -> ../../ttyUSB1
-```
+</pre>
 #### Serial port loopback on raspberrypi 
 This method use internal uarts of rpi. Two wires are needed to connect the two ports (this example uses UART3 and UART4 on an rpi5 without HW flow control) :
 ```
-
 GPIO12(UART4_TX) <-> GPIO9 (UART3_RX)
 GPIO13(UART4_RX) <-> GPIO8 (UART3_TX) 
 ```
-Enable the two serial UART ports on rpi:
+For rpi4 with HW flow control:
+
+```
+ (7)(GPIO4)TXD3<->(21)(GPIO9)RXD4
+(29)(GPIO5)RXD3<->(24)(GPIO8)TXD4
+(31)(GPIO6)CTS3<->(23)(GPIO11)RTS4
+(26)(GPIO7)RTS3<->(19)(GPIO10)CTS4
+
+```
+Enable the two serial UART ports on rpi5:
 ```
 sudo vi /boot/firmware/config.txt
 
-dtparam=uart3-pi5=on
-dtparam=uart4-pi5=on
+dtoverlay=uart3-pi5                                                        
+dtoverlay=uart4-pi5
 ```
-Execute this from command line (settings do not survive across reboots):
+And for rpi4:
 ```
-dtoverlay uart3-pi5
-dtoverlay uart4-pi5
+dtoverlay=uart3,ctsrts                                                        
+dtoverlay=uart4,ctsrts
 ```
-At this point the two ports should be seen in dmesg:
-```
+Upon reboot of rpi, the two ports should be seen in dmesg:
+<pre>
 1f0003c000.serial: ttyAMA3 at MMIO 0x1f0003c000 (irq = 144, base_baud = 0) is a PL011 AXI
 1f00040000.serial: ttyAMA4 at MMIO 0x1f00040000 (irq = 145, base_baud = 0) is a PL011 AXI
 
@@ -53,7 +59,7 @@ id@raspberrypi5:~ $ ls -al <b>/dev/ttyAMA3</b>
 crw-rw---- 1 root dialout 204, 67 Sep 15 12:12 <b>/dev/ttyAMA3</b>
 id@raspberrypi5:~ $ ls -al <b>/dev/ttyAMA4</b>
 crw-rw---- 1 root dialout 204, 68 Sep 15 12:13 <b>/dev/ttyAMA4</b>
-```
+</pre>
 ### Virtual Serial tty0tty kernel module
 This method uses a kernel Virtual Serial driver, hence it does not involve any additional HW. The driver is a kernel module. Disadvantage of this methond is that whenever the kernel version changes, the module needs to be rebuilt against the new kernel.
 ```
@@ -172,7 +178,7 @@ For tty0tty virtual serial, change serial port name:
 /dev/tnt1
 ```
 
-A set of set of simple scripts is provided in <b>serial-udp/link-scripts/</b>. A config file, <b>serial-udp/link.conf</b>, should be updated with the correct parameters. The scripts restart the two above commands in case they crash.
+A set of simple scripts is provided in <b>serial-udp/link-scripts/</b>. A config file, <b>serial-udp/link.conf</b>, should be updated with the correct parameters. The scripts restart the two above commands in case they crash.
 Content of the <b>link.conf</b> is below:
 ```
 # general params
@@ -198,7 +204,7 @@ SUDPFWD_DATADEBUG=0
 The scripts are meant to be run by <b>serial-udp/set-link.sh</b> and stopped by <b>serial-udp/kill-link.sh</b>. The scripts can be used at the boot of a Linux sytem by placing them in /etc/rc.local so that everything is set-up automatically upon boot.
 
 Now resetting the BT controller should be possible. This assumes there was already one controller available on the host so the new index is 1:
-```
+<pre>
 sudo hciconfig hci1 reset
 sudo hciconfig
 hci1:	Type: Primary  Bus: UART
@@ -212,7 +218,7 @@ hci0:	Type: Primary  Bus: UART
 	UP RUNNING 
 	RX bytes:7213 acl:0 sco:0 events:592 errors:0
 	TX bytes:69142 acl:0 sco:0 commands:561 errors:0
-```
+</pre>
 When <b>UP RUNNING</b> is seen like above, everything is working as expected. The BD address is the MAC address of the ESP32 and it can be seen in ESP32's serial console upon boot. Debugging the HCI communication with *btmon* is easy:
 ```
 sudo btmon -i 1
@@ -260,7 +266,7 @@ hci0:	Type: Primary  Bus: UART
 	TX bytes:69142 acl:0 sco:0 commands:561 errors:0
 ```
 
-When <b>UP RUNNING</b> is seen on the last added controller (hci1 in ourt case), everything is working as expected. The BD address is the MAC address of the ESP32 and it can be seen in ESP32's serial console upon boot.
+When <b>UP RUNNING</b> is seen on the last added controller (hci1 in our case), everything is working as expected. The BD address is the MAC address of the ESP32 and it can be seen in ESP32's serial console upon boot.
 
 
 ### ESP32 setup 
