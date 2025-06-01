@@ -38,11 +38,11 @@ if [[ "$SUDPFWD_HWFLOW" -eq 0 ]]; then
   PARAMS="$PARAMS -N"
 fi
 
-if [[ "$SUDPFWD_FLOWDEBUG" -eq 0 ]]; then
+if [[ "$SUDPFWD_FLOWDEBUG" -eq 1 ]]; then
   PARAMS="$PARAMS -F"
 fi
 
-if [[ "$SUDPFWD_DATADEBUG" -eq 0 ]]; then
+if [[ "$SUDPFWD_DATADEBUG" -eq 1 ]]; then
   PARAMS="$PARAMS -D"
 fi
 

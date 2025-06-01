@@ -207,9 +207,11 @@ int main(int argc, char *argv[])
         break;
       case 'F':
         p_debug_flow = 1;
+        debug_flow = 1;
         break;
       case 'D':
         p_debug_data = 1;
+        debug_data = 1;
         break;
       case 'N':
         p_no_rtscts = 1;
