@@ -11,12 +11,14 @@ res=""
 while :; do
   HCINUM=$(hciconfig | grep hci | wc -l)
   HCINUM=$(($HCINUM-1))                 
-  log "HCINUM: $HCINUM"                
+  HCINUMB=$(bluetoothctl --timeout 0 list | grep Controller | wc -l)
+  HCINUMB=$(($HCINUMB-1))
                         
   #kill btattach after a number or tries                                                                  
-  if [[ $HCINUM -ge 0 ]]; then
-    res=$(hciconfig hci${HCINUM} | grep DOWN)
-    if [[ ! -z "$res" ]]; then
+  if [[ $HCINUM != $HCINUMB ]]; then
+    #res=$(hciconfig hci${HCINUM} | grep DOWN)
+    #if [[ ! -z "$res" ]]; then
+    if [[ true ]]; then
       log "Trying hciconfig up: hci$HCINUM"      
       hciconfig hci${HCINUM} up        
       DOWN_COUNT=$(($DOWN_COUNT+1))    
