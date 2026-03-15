@@ -24,6 +24,7 @@ while :; do
       if [[ $DOWN_COUNT -ge $DOWN_COUNT_MAX ]]; then
         log "killing btattach"    
         killall -SIGKILL btattach
+        killall -SIGKILL sudp-forwarder
         DOWN_COUNT=0
       fi
     else
