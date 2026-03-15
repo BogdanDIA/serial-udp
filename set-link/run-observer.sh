@@ -16,7 +16,7 @@ while :; do
   #kill btattach after a number or tries                                                                  
   if [[ $HCINUM -ge 0 ]]; then
     res=$(hciconfig hci${HCINUM} | grep DOWN)
-    if [[ ! -z $res ]]; then
+    if [[ ! -z "$res" ]]; then
       log "Trying hciconfig up: hci$HCINUM"      
       hciconfig hci${HCINUM} up        
       DOWN_COUNT=$(($DOWN_COUNT+1))    
