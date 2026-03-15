@@ -5,6 +5,7 @@ CPATH=$(dirname "$0")/serial-udp.conf
 . ${SCRIPTS_PATH}/log-def.sh
 
 DOWN_COUNT=0
+DOWN_COUNT_MAX=6
 res=""
 
 while :; do
@@ -15,12 +16,12 @@ while :; do
   #kill btattach after a number or tries                                                                  
   if [[ $HCINUM -ge 0 ]]; then
     res=$(hciconfig hci${HCINUM} | grep DOWN)
-    if [[ ! -z $res ]]; then                   
+    if [[ ! -z $res ]]; then
       log "Trying hciconfig up: hci$HCINUM"      
       hciconfig hci${HCINUM} up        
       DOWN_COUNT=$(($DOWN_COUNT+1))    
       log "DOWN_COUNT: $DOWN_COUNT"
-      if [[ $DOWN_COUNT -ge 6 ]]; then   
+      if [[ $DOWN_COUNT -ge $DOWN_COUNT_MAX=6 ]]; then
         log "killing btattach"    
         killall -SIGKILL btattach
         DOWN_COUNT=0
