@@ -21,7 +21,7 @@ while :; do
       hciconfig hci${HCINUM} up        
       DOWN_COUNT=$(($DOWN_COUNT+1))    
       log "DOWN_COUNT: $DOWN_COUNT"
-      if [[ $DOWN_COUNT -ge $DOWN_COUNT_MAX=6 ]]; then
+      if [[ $DOWN_COUNT -ge $DOWN_COUNT_MAX ]]; then
         log "killing btattach"    
         killall -SIGKILL btattach
         DOWN_COUNT=0
