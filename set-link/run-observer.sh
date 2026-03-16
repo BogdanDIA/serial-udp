@@ -6,31 +6,26 @@ CPATH=$(dirname "$0")/serial-udp.conf
 
 DOWN_COUNT=0
 DOWN_COUNT_MAX=6
-res=""
 
 while :; do
-  HCINUM=$(hciconfig | grep hci | wc -l)
-  HCINUM=$(($HCINUM-1))                 
-  HCINUMB=$(bluetoothctl --timeout 0 list | grep Controller | wc -l)
-  HCINUMB=$(($HCINUMB-1))
-  log "HCICNUM: $HCINUM, HCINUMB: $HCINUMB"
+  #find HCINUM with hciconfig
+  HCINUM_H=$(hciconfig | grep hci | wc -l)
+  HCINUM_H=$(($HCINUM_H-1)) 
+
+  #find HCINUM with bluetoothctl
+  HCINUM_B=$(bluetoothctl --timeout 0 list | grep Controller | wc -l)
+  HCINUM_B=$(($HCINUM_B-1))
+
+  log "HCICNUM_H: $HCINUM_H, HCINUM_B: $HCINUM_B"
                         
-  #kill btattach after a number or tries                                                                  
-  if [[ "$HCINUM" != "$HCINUMB" ]]; then
-    #res=$(hciconfig hci${HCINUM} | grep DOWN)
-    #if [[ ! -z "$res" ]]; then
-    if [[ true ]]; then
-      log "Trying hciconfig up: hci$HCINUM"      
-      hciconfig hci${HCINUM} up        
-      DOWN_COUNT=$(($DOWN_COUNT+1))    
-      log "DOWN_COUNT: $DOWN_COUNT"
-      if [[ $DOWN_COUNT -ge $DOWN_COUNT_MAX ]]; then
-        log "killing btattach"    
-        killall -SIGKILL btattach
-        killall -SIGKILL sudp-forwarder
-        DOWN_COUNT=0
-      fi
-    else
+  #kill links after a number or tries                                                                  
+  if [[ "$HCINUM_H" != "$HCINUM_B" ]]; then
+    DOWN_COUNT=$(($DOWN_COUNT+1))    
+    log "DOWN_COUNT: $DOWN_COUNT"
+    if [[ $DOWN_COUNT -ge $DOWN_COUNT_MAX ]]; then
+      log "killing links..."    
+      killall -SIGKILL btattach
+      killall -SIGKILL sudp-forwarder
       DOWN_COUNT=0
     fi
   else
