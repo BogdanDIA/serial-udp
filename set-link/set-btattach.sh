@@ -33,7 +33,8 @@ fi
 log "`date` set-btattach:btattach"
 
 while [[ true ]]; do
-  btattach $PARAMS 2>&1
+  btattach $PARAMS 2>&1 &
+  wait
   log "set-btattach:btattach crashed with $?.  Respawning.."
   sleep 10
 done
