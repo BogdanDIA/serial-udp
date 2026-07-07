@@ -7,6 +7,16 @@ CPATH=$(dirname "$0")/serial-udp.conf
 DOWN_COUNT=0
 DOWN_COUNT_MAX=6
 
+#check if last added controller is having proper number
+HCICOUNT=$(hciconfig | grep hci | wc -l)
+if [[ "$HCICOUNT" -ge 2 ]]; then
+  CTRL=$(hciconfig | sed -n -E -e 's/^hci([0-9]+).*/\1/p')
+  RES=$(echo $CTRL | awk '{ if ($1 != ($2+1)) {print "1"} else {print "0"} }')
+  if [[ "$RES" != 0 ]]; then
+    killall -SIGKILL btattach
+  fi
+fi
+
 while :; do
   #find HCINUM with hciconfig
   HCINUM_H=$(hciconfig | grep hci | wc -l)
