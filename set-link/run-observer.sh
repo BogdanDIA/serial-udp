@@ -14,7 +14,10 @@ while :; do
     CTRL=$(hciconfig | sed -n -E -e 's/^hci([0-9]+).*/\1/p')
     RES=$(echo $CTRL | awk '{ if ($1 != ($2+1)) {print "1"} else {print "0"} }')
     if [[ "$RES" != 0 ]]; then
+      log "killing links due to hci bad number..."
       killall -SIGKILL btattach
+      killall -SIGKILL sudp-forwarder
+      DOWN_COUNT=0
     fi
   fi
 
@@ -33,7 +36,7 @@ while :; do
     DOWN_COUNT=$(($DOWN_COUNT+1))    
     log "DOWN_COUNT: $DOWN_COUNT"
     if [[ $DOWN_COUNT -ge $DOWN_COUNT_MAX ]]; then
-      log "killing links..."    
+      log "killing links due to hci down..."
       killall -SIGKILL btattach
       killall -SIGKILL sudp-forwarder
       DOWN_COUNT=0
